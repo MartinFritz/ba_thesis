@@ -1,4 +1,5 @@
 #include <benchmark/benchmark.h>
+#include <execution>
 #include "quicksort.h"
 #include "sorttest.h"
 #include "query19OWN.h"
@@ -7,7 +8,28 @@
 #include "query19OWN2_3.h"
 #include "memmaprosetta.h"
 #include "ht.h"
+#include "atomic_load_store_n.h"
 #include <omp.h>
+
+
+static void BM_atomic_load_n(benchmark::State& state) {
+  uint64_t a[100000];
+  uint64_t b[100000];
+  uint64_t c[100000];
+  for (auto _ : state) {
+    loadMemmode(a,b,c,100000,state.range(0));
+  }
+}
+
+static void BM_atomic_store_n(benchmark::State& state) {
+  uint64_t a[100000];
+  uint64_t b[100000];
+  uint64_t c[100000];
+  for (auto _ : state) {
+    storeMemmode(a,b,c,100000,state.range(0));
+  }
+}
+
 
 static void BM_ht_insert(benchmark::State& state) {
   myHashTable<uint32_t> h;
@@ -115,14 +137,15 @@ static void BM_unorderedmap_delete(benchmark::State& state) {
 
 
 
-static void BM_introsort(benchmark::State& state) {
+static void BM_introsort_seq(benchmark::State& state) {
   std::vector<int> input;
-  
+  std::mt19937 gen(100);
+  std::uniform_int_distribution<int> uni(0, std::numeric_limits<int>::max());
   for (auto _ : state) {
     state.PauseTiming();
     input.resize(state.range(0));
     for (int i = 0; i < (state.range(0)); i++) {
-      input[i] = (rand() % 1000000);
+      input[i] = (uni(gen));
     }
     state.ResumeTiming();
     std::sort(std::execution::seq, input.begin(), input.end());
@@ -130,10 +153,27 @@ static void BM_introsort(benchmark::State& state) {
   return;
 }
 
+static void BM_introsort_par(benchmark::State& state) {
+  std::vector<int> input;
+  std::mt19937 gen(100);
+  std::uniform_int_distribution<int> uni(0, std::numeric_limits<int>::max());
+  for (auto _ : state) {
+    state.PauseTiming();
+    input.resize(state.range(0));
+    for (int i = 0; i < (state.range(0)); i++) {
+      input[i] = (uni(gen));
+    }
+    state.ResumeTiming();
+    std::sort(std::execution::par, input.begin(), input.end());
+  }
+  return;
+}
+
 static void BM_memmaprosetta_arm(benchmark::State& state) {
   setup_arm();
+  long x;
   for (auto _: state) {
-    memmaprosetta_arm(state.range(0));
+    benchmark::DoNotOptimize(x = memmaprosetta_arm(state.range(0)));
   }
   return;
 }
@@ -149,18 +189,19 @@ static void BM_memmaprosetta_intel(benchmark::State& state) {
 
 static void BM_quicksort_startPiv(benchmark::State& state) {
   std::vector<int> input;
-  
+  std::mt19937 gen(100);
+  std::uniform_int_distribution<int> uni(0, std::numeric_limits<int>::max());
   for (auto _ : state) {
     state.PauseTiming();
     input.resize(state.range(0));
 
     for (int i = 0; i < (state.range(0)); i++) {
-      input[i] = (rand() % 1000000);
+      input[i] = uni(gen);
     }
 
     omp_set_dynamic(0);              /** Explicitly disable dynamic teams **/
     omp_set_num_threads(state.range(1));
-    //std::sort(std::execution::par_unseq, input.begin(), input.end());
+
 
     state.ResumeTiming();
     #pragma omp parallel 
@@ -174,31 +215,45 @@ static void BM_quicksort_startPiv(benchmark::State& state) {
 
 static void BM_quicksort_endPiv(benchmark::State& state) {
   std::vector<int> input;
-  
+  std::mt19937 gen(100);
+  std::uniform_int_distribution<int> uni(0, std::numeric_limits<int>::max());
   for (auto _ : state) {
     state.PauseTiming();
     input.resize(state.range(0));
 
     for (int i = 0; i < (state.range(0)); i++) {
-      input[i] = (rand() % 1000000);
+      input[i] = (uni(gen));
     }
-    state.ResumeTiming();
-    quick_sort_endPivot(input, 0, input.size()-1);
+  omp_set_dynamic(0);              /** Explicitly disable dynamic teams **/
+  omp_set_num_threads(state.range(1));
+  state.ResumeTiming();
+  #pragma omp parallel 
+  {
+    #pragma omp single
+    quicksort_end(input, 0, input.size()-1);
+  }
   }
 }
 
-static void BM_quicksort_rdPiv(benchmark::State& state) {
+static void BM_quicksort_middlePiv(benchmark::State& state) {
   std::vector<int> input;
-  
+  std::mt19937 gen(100);
+  std::uniform_int_distribution<int> uni(0, std::numeric_limits<int>::max());
   for (auto _ : state) {
     state.PauseTiming();
     input.resize(state.range(0));
 
-    for (int i = 0; i < (state.range(0)); i++) {
-      input[i] = (rand() % 1000000);
+  for (int i = 0; i < (state.range(0)); i++) {
+    input[i] = (uni(gen));
+  }
+  omp_set_dynamic(0);              /** Explicitly disable dynamic teams **/
+  omp_set_num_threads(state.range(1));
+  state.ResumeTiming();
+  #pragma omp parallel 
+    {
+      #pragma omp single
+      quicksort_middle(input, 0, input.size()-1);
     }
-    state.ResumeTiming();
-    quick_sort_randomPivot(input, 0, input.size()-1);
   }
 }
 
@@ -253,12 +308,13 @@ static void BM_query11(benchmark::State& state) {
 }
 
 static void BM_query19_2_3(benchmark::State& state) {
+  long x = 0;
   setupQuery19_2_3();
-  double x;
+
   for (auto _ : state) {
-    query19OWN2_3();
+    x = query19OWN2_3();
   }
-  std::cout << x << std::endl;
+
 }
 
 
@@ -275,21 +331,33 @@ static void BM_query19_2_3(benchmark::State& state) {
 //BENCHMARK(BM_query19)->Unit(benchmark::kSecond);
 //BENCHMARK(BM_query19_2)->Unit(benchmark::kSecond);
 //BENCHMARK(BM_query11)->Unit(benchmark::kSecond);
+
 //BENCHMARK(BM_query19_2_3) -> Unit(benchmark::kSecond);
-//BENCHMARK(BM_memmaprosetta_arm) ->Arg(10000)->Arg(100000)->Arg(1000000)->Arg(100000000)->Arg(2000000000) -> Unit(benchmark::kMillisecond);
-//BENCHMARK(BM_memmaprosetta_intel) ->Arg(10000)->Arg(100000)->Arg(1000000)->Arg(100000000)->Arg(2000000000) -> Unit(benchmark::kMillisecond);
-//BENCHMARK(BM_quicksort_startPiv) -> Name("quicksort_startPiv_1")->Args({10000,1})->Args({100000,1})->Args({1000000,1})->Args({100000000,1})->Args({1000000000,1})->Unit(benchmark::kMillisecond);
-//BENCHMARK(BM_quicksort_startPiv) -> Name("quicksort_startPiv_2")->Args({10000,2})->Args({100000,2})->Args({1000000,2})->Args({100000000,2})->Args({1000000000,2})->Unit(benchmark::kMillisecond);
-//BENCHMARK(BM_quicksort_startPiv) -> Name("quicksort_startPiv_4")->Args({10000,4})->Args({100000,4})->Args({1000000,4})->Args({100000000,4})->Args({1000000000,4})->Unit(benchmark::kMillisecond);
-//BENCHMARK(BM_quicksort_startPiv) -> Name("quicksort_startPiv_8")->Args({10000,8})->Args({100000,8})->Args({1000000,8})->Args({100000000,8})->Args({1000000000,8})->Unit(benchmark::kMillisecond);
-//BENCHMARK(BM_ht_insert) -> Name("ht_insert") ->Arg(10000)->Arg(100000)->Arg(1000000)->Arg(10000000)->Arg(100000000) -> Unit(benchmark::kMillisecond);
-//BENCHMARK(BM_unorderedmap_insert) -> Name("unorderedmap_insert") ->Arg(10000)->Arg(100000)->Arg(1000000)->Arg(10000000)->Arg(100000000) -> Unit(benchmark::kMillisecond);
-//BENCHMARK(BM_ht_lookup) -> Name("ht_lookup") ->Arg(10000)->Arg(100000)->Arg(1000000)->Arg(10000000)->Arg(100000000) -> Unit(benchmark::kMillisecond);
-//BENCHMARK(BM_unorderedmap_lookup) -> Name("unorderedmap_lookup") ->Arg(10000)->Arg(100000)->Arg(1000000)->Arg(10000000)->Arg(100000000) -> Unit(benchmark::kMillisecond);
+//BENCHMARK(BM_memmaprosetta_arm) -> Name("hexcode_arm") ->Arg(10000)->Arg(100000)->Arg(1000000)->Arg(10000000)->Arg(100000000) ->Arg(1000000000) ->Unit(benchmark::kMillisecond);
+//BENCHMARK(BM_memmaprosetta_intel) -> Name("hexcode_intel") ->Arg(10000)->Arg(100000)->Arg(1000000)->Arg(10000000)->Arg(100000000) ->Arg(1000000000) -> Unit(benchmark::kMillisecond);
+BENCHMARK(BM_quicksort_startPiv) -> Name("quicksort_startPiv_1")->Args({10000,1})->Args({100000,1})->Args({1000000,1})->Args({10000000,1})->Args({100000000,1})->Args({1000000000,1})->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_quicksort_startPiv) -> Name("quicksort_startPiv_2")->Args({10000,2})->Args({100000,2})->Args({1000000,2})->Args({10000000,2})->Args({100000000,2})->Args({1000000000,2})->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_quicksort_startPiv) -> Name("quicksort_startPiv_4")->Args({10000,4})->Args({100000,4})->Args({1000000,4})->Args({10000000,4})->Args({100000000,4})->Args({1000000000,4})->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_quicksort_startPiv) -> Name("quicksort_startPiv_8")->Args({10000,8})->Args({100000,8})->Args({1000000,8})->Args({10000000,8})->Args({100000000,8})->Args({1000000000,8})->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_quicksort_middlePiv) -> Name("quicksort_middlePiv_1")->Args({10000,1})->Args({100000,1})->Args({1000000,1})->Args({10000000,1})->Args({100000000,1})->Args({1000000000,1})->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_quicksort_middlePiv) -> Name("quicksort_middlePiv_2")->Args({10000,2})->Args({100000,2})->Args({1000000,2})->Args({10000000,2})->Args({100000000,2})->Args({1000000000,2})->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_quicksort_middlePiv) -> Name("quicksort_middlePiv_4")->Args({10000,4})->Args({100000,4})->Args({1000000,4})->Args({10000000,4})->Args({100000000,4})->Args({1000000000,4})->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_quicksort_middlePiv) -> Name("quicksort_middlePiv_8")->Args({10000,8})->Args({100000,8})->Args({1000000,8})->Args({10000000,8})->Args({100000000,8})->Args({1000000000,8})->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_quicksort_endPiv) -> Name("quicksort_endPiv_1")->Args({10000,1})->Args({100000,1})->Args({1000000,1})->Args({10000000,1})->Args({100000000,1})->Args({1000000000,1})->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_quicksort_endPiv) -> Name("quicksort_endPiv_2")->Args({10000,2})->Args({100000,2})->Args({1000000,2})->Args({10000000,2})->Args({100000000,2})->Args({1000000000,2})->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_quicksort_endPiv) -> Name("quicksort_endPiv_4")->Args({10000,4})->Args({100000,4})->Args({1000000,4})->Args({10000000,4})->Args({100000000,4})->Args({1000000000,4})->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_quicksort_endPiv) -> Name("quicksort_endPiv_8")->Args({10000,8})->Args({100000,8})->Args({1000000,8})->Args({10000000,8})->Args({100000000,8})->Args({1000000000,8})->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_introsort_seq) -> Name("std::sort_seq") -> Arg(10000)->Arg(100000)->Arg(1000000)->Arg(10000000)->Arg(100000000) -> Arg(1000000000) ->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_introsort_par) -> Name("std::sort_par") -> Arg(10000)->Arg(100000)->Arg(1000000)->Arg(10000000)->Arg(100000000) -> Arg(1000000000) ->Unit(benchmark::kMillisecond);
+// BENCHMARK(BM_ht_insert) -> Name("ht_insert") ->Arg(10000)->Arg(100000)->Arg(1000000)->Arg(10000000)->Arg(100000000) -> Unit(benchmark::kMillisecond);
+// BENCHMARK(BM_unorderedmap_insert) -> Name("unorderedmap_insert") ->Arg(10000)->Arg(100000)->Arg(1000000)->Arg(10000000)->Arg(100000000) -> Unit(benchmark::kMillisecond);
+// BENCHMARK(BM_ht_lookup) -> Name("ht_lookup") ->Arg(10000)->Arg(100000)->Arg(1000000)->Arg(10000000)->Arg(100000000) -> Unit(benchmark::kMillisecond);
+// BENCHMARK(BM_unorderedmap_lookup) -> Name("unorderedmap_lookup") ->Arg(10000)->Arg(100000)->Arg(1000000)->Arg(10000000)->Arg(100000000) -> Unit(benchmark::kMillisecond);
+// BENCHMARK(BM_ht_delete) -> Name("ht_delete") ->Arg(10000)->Arg(100000)->Arg(1000000)->Arg(10000000)->Arg(100000000) -> Unit(benchmark::kMillisecond);
+// BENCHMARK(BM_unorderedmap_delete) -> Name("unorderedmap_delete") ->Arg(10000)->Arg(100000)->Arg(1000000)->Arg(10000000)->Arg(100000000) -> Unit(benchmark::kMillisecond);
+//BENCHMARK(BM_atomic_load_n) -> Name("atomic_load")->Arg(__ATOMIC_RELAXED)->Arg(__ATOMIC_CONSUME)->Arg(__ATOMIC_ACQUIRE)->Arg(__ATOMIC_RELEASE)->Arg(__ATOMIC_ACQ_REL)->Arg(__ATOMIC_SEQ_CST)->Unit(benchmark::kMillisecond);
+//BENCHMARK(BM_atomic_store_n) -> Name("atomic_store")Arg(__ATOMIC_RELAXED)->Arg(__ATOMIC_CONSUME)->Arg(__ATOMIC_ACQUIRE)->Arg(__ATOMIC_RELEASE)->Arg(__ATOMIC_ACQ_REL)->Arg(__ATOMIC_SEQ_CST)->Unit(benchmark::kMillisecond);
 
-BENCHMARK(BM_unorderedmap_delete) -> Name("unorderedmap_delete") ->Arg(10000)->Arg(100000)->Arg(1000000)->Arg(10000000)->Arg(100000000) -> Unit(benchmark::kMillisecond);
-
-BENCHMARK(BM_ht_delete) -> Name("ht_delete") ->Arg(10000)->Arg(100000)->Arg(1000000)->Arg(10000000)->Arg(100000000) -> Unit(benchmark::kMillisecond);
 
 
 BENCHMARK_MAIN();
