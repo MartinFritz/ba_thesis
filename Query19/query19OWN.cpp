@@ -174,7 +174,7 @@ int main() {
     std::vector<LineItem> lineitems;
     double revenue = 0;
     auto start = std::chrono::high_resolution_clock::now();
-    partFile.open("/Users/shiro/tpch-dbgen/part.tbl");
+    partFile.open("/Users/x/tpch-dbgen/part.tbl");
 
 
     while(std::getline(partFile,line)) {
@@ -210,7 +210,7 @@ int main() {
     }
     partFile.close();
     
-    lineitemFile.open("/Users/shiro/tpch-dbgen/lineitem.tbl");
+    lineitemFile.open("/Users/x/tpch-dbgen/lineitem.tbl");
     while(std::getline(lineitemFile,line)) {
         LineItem lineItem(line);
         if (lineItem.l_shipinstruct == "DELIVER IN PERSON" && (lineItem.l_shipmode == "AIR" 
