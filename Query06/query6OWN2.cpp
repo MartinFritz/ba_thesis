@@ -23,7 +23,7 @@ int main() {
 
     int i = 0;
 
-    int fptr = open("/Users/shiro/tpch-dbgen/lineitem.tbl", O_RDONLY);
+    int fptr = open("/Users/x/tpch-dbgen/lineitem.tbl", O_RDONLY);
     fstat(fptr,&sb);
     char *file_in_memory = (char *) mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fptr, 0);
     std::string l_discount, l_extendedprice, l_quantity, l_shipdate = "";
