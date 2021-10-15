@@ -23,7 +23,7 @@ bool comp(std::pair<int,long double> p1, std::pair<int,long double> p2) {
 }
 
 int main() {
-    int fptr = open("/Users/shiro/tpch-dbgen/nation.tbl", O_RDONLY);
+    int fptr = open("/Users/x/tpch-dbgen/nation.tbl", O_RDONLY);
     struct stat sb;
    // struct stat sc;
    // struct stat sd;
@@ -78,7 +78,7 @@ tbb::concurrent_unordered_map<int,double> resmap;
     munmap(file_in_memory,sb.st_size);
     close(fptr);
     
-    fptr = open("/Users/shiro/tpch-dbgen/partsupp.tbl",O_RDONLY);
+    fptr = open("/Users/x/tpch-dbgen/partsupp.tbl",O_RDONLY);
     
     if (fstat(fptr,&sb) == -1) {
         perror("Couldnt get file size\n");
@@ -117,7 +117,7 @@ tbb::concurrent_unordered_map<int,double> resmap;
     }
     munmap(file_in_memory,sb.st_size);
     close(fptr);
-    fptr = open("/Users/shiro/tpch-dbgen/supplier.tbl",O_RDONLY);
+    fptr = open("/Users/x/tpch-dbgen/supplier.tbl",O_RDONLY);
     
     if (fstat(fptr,&sb) == -1) {
         perror("Couldnt get file size\n");
