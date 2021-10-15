@@ -78,7 +78,7 @@ int main() {
     long double queryRes = 0;
     ifstream file;
     string line;
-    file.open("/Users/shiro/tpch-dbgen/lineitem.tbl");
+    file.open("/Users/x/tpch-dbgen/lineitem.tbl");
     auto start = std::chrono::high_resolution_clock::now();
     while (getline(file,line)) {
         Data data(line);
