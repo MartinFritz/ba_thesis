@@ -11,7 +11,7 @@ from math import sqrt
 
 
 MARKERLIST = ['o','x','d','+','^','*', 's']
-with open("/Users/shiro/hashtable_benchmark_laptop.json","r") as file:
+with open("/Users/x/hashtable_benchmark_laptop.json","r") as file:
     data = json.load(file)
 labels = []
 cputime = []
@@ -62,6 +62,6 @@ plt.ylabel('throughput in elements/ms')
 plt.tight_layout()
 plt.legend()
 
-plt.savefig("hashing_laptop.pdf")
+plt.savefig("x.pdf")
 
 plt.show()
