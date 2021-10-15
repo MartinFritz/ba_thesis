@@ -67,7 +67,7 @@ int main() {
     std::unordered_map<int,long double> partsuppsTable;
     std::vector<PartSupp> psvector;
     auto start = std::chrono::high_resolution_clock::now();
-    nationfile.open("/Users/shiro/tpch-dbgen/nation.tbl");
+    nationfile.open("/Users/x/tpch-dbgen/nation.tbl");
     int c = 0;
     while (std::getline(nationfile,line)) {
         int i = 0;
@@ -88,7 +88,7 @@ int main() {
     }
 
     nationfile.close();
-    supplierFile.open("/Users/shiro/tpch-dbgen/supplier.tbl");
+    supplierFile.open("/Users/x/tpch-dbgen/supplier.tbl");
     while (std::getline(supplierFile,line)) {
         int counter = 0;
         int i = 0;
@@ -118,7 +118,7 @@ int main() {
 
     supplierFile.close();
     long double overallvalue = 0;
-    partsuppFile.open("/Users/shiro/tpch-dbgen/partsupp.tbl");
+    partsuppFile.open("/Users/x/tpch-dbgen/partsupp.tbl");
     while (std::getline(partsuppFile,line)) {
         c++;
         int i = 0;
