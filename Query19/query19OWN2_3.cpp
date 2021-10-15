@@ -32,7 +32,7 @@ void setup() {
 
     int i = 0;
     std::string line;
-    int fptr = open("/Users/shiro/tpch-dbgen/part.tbl", O_RDONLY);
+    int fptr = open("/Users/x/tpch-dbgen/part.tbl", O_RDONLY);
     if (fstat(fptr,&sb) == -1) {
         perror("Couldnt get file size\n");
     }
@@ -74,7 +74,7 @@ void setup() {
     i = 0;
     close(fptr);
     munmap(file_in_memory, sb.st_size);
-    fptr = open("/Users/shiro/tpch-dbgen/lineitem.tbl", O_RDONLY);
+    fptr = open("/Users/x/tpch-dbgen/lineitem.tbl", O_RDONLY);
     fstat(fptr,&sb);
     file_in_memory = (char *) mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fptr, 0);
     std::string l_discount, l_extendedprice, l_quantity, l_shipinstruct, l_shipmode, l_partkey= "";
