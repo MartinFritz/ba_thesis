@@ -15,7 +15,7 @@ int main() {
     std::string line;
     double revenue = 0;
     auto start = std::chrono::high_resolution_clock::now();
-    file.open("/Users/shiro/tpch-dbgen/part.tbl");
+    file.open("/Users/x/tpch-dbgen/part.tbl");
     while (std::getline(file,line)) {
         std::string key = "";
         std::string size = "";
@@ -74,7 +74,7 @@ int main() {
         
     }
     file.close();
-    file.open("/Users/shiro/tpch-dbgen/lineitem.tbl");
+    file.open("/Users/x/tpch-dbgen/lineitem.tbl");
     while (std::getline(file,line)) {
         std::string key = "";
         int i = 0;
